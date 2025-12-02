@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import { getProducts } from '@/lib/api';
 import type { Product } from '@/types/product';
 
@@ -125,9 +126,14 @@ export default function ProductsPage() {
 
         {/* Results / Loading / Error */}
         {loading ? (
-          <div className="py-12 text-center text-gray-600">
-            Đang tải sản phẩm...
-          </div>
+          <>
+            <div className="mb-6 h-5 w-48 animate-pulse rounded bg-gray-200"></div>
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          </>
         ) : error ? (
           <div className="py-12 text-center text-red-600">{error}</div>
         ) : (

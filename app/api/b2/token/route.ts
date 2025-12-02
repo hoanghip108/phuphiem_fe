@@ -4,28 +4,23 @@ const B2_API_URL =
   'https://api005.backblazeb2.com/b2api/v2/b2_get_download_authorization';
 const B2_BUCKET_ID = process.env.B2_BUCKET_ID || 'c02c3c8e5734dae39dad0814';
 const B2_AUTHORIZATION_TOKEN = process.env.B2_AUTHORIZATION_TOKEN || '';
-const B2_DOWNLOAD_URL = 'https://f005.backblazeb2.com/file/Phuphiem';
+const B2_FILE_PREFIX = process.env.B2_FILE_PREFIX || 'test-uploads/';
 
 interface B2AuthResponse {
   authorizationToken: string;
   [key: string]: unknown;
 }
 
+// Cache token trong memory (server-side)
+let cachedToken: string | null = null;
+let tokenExpiry: number = 0;
+
 /**
- * GET /api/b2/image?fileName=test-uploads/1764668600636-logo.png
- * Proxy để lấy authorization token từ Backblaze B2 và trả về full URL
+ * GET /api/b2/token
+ * Lấy authorization token một lần với prefix test-uploads/
+ * Token được cache trong memory để tránh call API nhiều lần
  */
-export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
-  const fileName = searchParams.get('fileName');
-
-  if (!fileName) {
-    return NextResponse.json(
-      { error: 'fileName parameter is required' },
-      { status: 400 }
-    );
-  }
-
+export async function GET() {
   if (!B2_AUTHORIZATION_TOKEN) {
     return NextResponse.json(
       { error: 'B2_AUTHORIZATION_TOKEN is not configured' },
@@ -33,8 +28,14 @@ export async function GET(request: Request) {
     );
   }
 
+  // Kiểm tra cache token (còn hiệu lực trong 50 phút, token valid 1 giờ)
+  const now = Date.now();
+  if (cachedToken && tokenExpiry > now) {
+    return NextResponse.json({ token: cachedToken });
+  }
+
   try {
-    // Call Backblaze B2 API để lấy download authorization token
+    // Call Backblaze B2 API để lấy download authorization token với prefix
     const response = await fetch(B2_API_URL, {
       method: 'POST',
       headers: {
@@ -43,7 +44,7 @@ export async function GET(request: Request) {
       },
       body: JSON.stringify({
         bucketId: B2_BUCKET_ID,
-        fileNamePrefix: fileName,
+        fileNamePrefix: B2_FILE_PREFIX,
         validDurationInSeconds: 3600, // 1 hour
       }),
     });
@@ -60,15 +61,17 @@ export async function GET(request: Request) {
     const data = (await response.json()) as B2AuthResponse;
     const authToken = data.authorizationToken;
 
-    // Tạo full URL với authorization token
-    const imageUrl = `${B2_DOWNLOAD_URL}/${fileName}?Authorization=${authToken}`;
+    // Cache token (expire sau 50 phút để đảm bảo an toàn)
+    cachedToken = authToken;
+    tokenExpiry = now + 50 * 60 * 1000; // 50 minutes
 
-    return NextResponse.json({ url: imageUrl });
+    return NextResponse.json({ token: authToken });
   } catch (error) {
-    console.error('Error fetching B2 image URL:', error);
+    console.error('Error fetching B2 token:', error);
     return NextResponse.json(
       { error: 'Internal server error' },
       { status: 500 }
     );
   }
 }
+

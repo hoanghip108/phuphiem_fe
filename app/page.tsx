@@ -3,11 +3,14 @@
 import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
+import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import ImageCarousel from '@/components/ImageCarousel';
-import { getProducts, getB2ImageUrl } from '@/lib/api';
+import { getProducts, buildB2ImageUrl } from '@/lib/api';
+import { useB2Token } from '@/contexts/B2TokenContext';
 import type { Product } from '@/types/product';
 
 export default function Home() {
+  const { token } = useB2Token();
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,23 +27,16 @@ export default function Home() {
         setProducts(res.items.slice(0, 8));
         setError('');
 
-        // Convert images cho carousel
+        // Convert images cho carousel (dùng token từ context)
         const firstThree = res.items.slice(0, 3);
         const urlMap: Record<string, string> = {};
-        await Promise.all(
-          firstThree.map(async (product) => {
-            if (product.image && !product.image.startsWith('http')) {
-              try {
-                const url = await getB2ImageUrl(product.image);
-                urlMap[product.id] = url;
-              } catch {
-                urlMap[product.id] = '/placeholder.jpg';
-              }
-            } else {
-              urlMap[product.id] = product.image || '/placeholder.jpg';
-            }
-          })
-        );
+        firstThree.forEach((product) => {
+          if (product.image && !product.image.startsWith('http')) {
+            urlMap[product.id] = buildB2ImageUrl(product.image, token);
+          } else {
+            urlMap[product.id] = product.image || '/placeholder.jpg';
+          }
+        });
         setCarouselImageUrls(urlMap);
       } catch (err) {
         console.error(err);
@@ -50,8 +46,11 @@ export default function Home() {
       }
     };
 
-    fetchProducts();
-  }, []);
+    // Chỉ fetch products khi đã có token
+    if (token !== null) {
+      fetchProducts();
+    }
+  }, [token]);
 
   // Tạo slides cho carousel từ products với URL đã convert
   const carouselSlides = useMemo(
@@ -165,8 +164,10 @@ export default function Home() {
             </p>
           </div>
           {loading ? (
-            <div className="py-12 text-center text-gray-600">
-              Đang tải sản phẩm...
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
             </div>
           ) : error ? (
             <div className="py-12 text-center text-red-600">{error}</div>

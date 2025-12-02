@@ -283,28 +283,20 @@ export async function getProductById(id: string): Promise<Product> {
   }
 }
 
-/**
- * Convert Backblaze B2 fileNamePrefix thành full URL với authorization
- * @param fileNamePrefix - Ví dụ: "test-uploads/1764668600636-logo.png"
- * @returns Promise<string> - Full URL với authorization token
- */
-export async function getB2ImageUrl(fileNamePrefix: string): Promise<string> {
-  if (!fileNamePrefix) return '/placeholder.jpg';
+const B2_DOWNLOAD_URL = 'https://f005.backblazeb2.com/file/Phuphiem';
 
-  try {
-    const response = await fetch(
-      `/api/b2/image?fileName=${encodeURIComponent(fileNamePrefix)}`
-    );
-    if (!response.ok) {
-      console.error('Failed to get B2 image URL:', fileNamePrefix);
-      return '/placeholder.jpg';
-    }
-    const data = (await response.json()) as { url: string };
-    return data.url;
-  } catch (error) {
-    console.error('Error getting B2 image URL:', error);
-    return '/placeholder.jpg';
-  }
+/**
+ * Build Backblaze B2 image URL từ fileNamePrefix và token
+ * @param fileNamePrefix - Ví dụ: "test-uploads/1764668600636-logo.png"
+ * @param token - Authorization token từ B2 API
+ * @returns string - Full URL với authorization token
+ */
+export function buildB2ImageUrl(
+  fileNamePrefix: string,
+  token: string | null
+): string {
+  if (!fileNamePrefix || !token) return '/placeholder.jpg';
+  return `${B2_DOWNLOAD_URL}/${fileNamePrefix}?Authorization=${token}`;
 }
 
 function mapBackendProductToProduct(p: BackendProduct): Product {
