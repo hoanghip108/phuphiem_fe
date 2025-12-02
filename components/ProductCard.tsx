@@ -1,6 +1,6 @@
-import Image from 'next/image';
 import Link from 'next/link';
 import { Product } from '@/types/product';
+import B2Image from '@/components/B2Image';
 
 interface ProductCardProps {
   product: Product;
@@ -19,11 +19,8 @@ export default function ProductCard({ product }: ProductCardProps) {
       <div className="overflow-hidden rounded-lg bg-white shadow-md transition-shadow hover:shadow-xl">
         {/* Image */}
         <div className="relative aspect-square overflow-hidden bg-gray-100">
-          <Image
-            src={
-              product.image ||
-              'https://drive.google.com/file/d/16_4Mgjnvf7Qhm4zfpZGcE-Hg9IY-omeg/view?usp=drive_link'
-            }
+          <B2Image
+            fileNamePrefix={product.image}
             alt={product.name}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-110"

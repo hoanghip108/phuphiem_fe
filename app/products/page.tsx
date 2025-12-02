@@ -87,7 +87,7 @@ export default function ProductsPage() {
                   setSearchQuery(e.target.value);
                   setPage(1);
                 }}
-                className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 focus:border-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-600"
+                className="w-full rounded-lg border border-gray-300 px-4 py-2 pl-10 text-black placeholder:text-black focus:border-rose-600 focus:outline-none focus:ring-2 focus:ring-rose-600"
               />
               <svg
                 className="absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-400"
@@ -133,7 +133,7 @@ export default function ProductsPage() {
         ) : (
           <>
             <div className="mb-6 text-sm text-gray-600">
-              Tìm thấy {total} sản phẩm · Trang {page}/{totalPages}
+              Tìm thấy {total} sản phẩm
             </div>
 
             {/* Products Grid */}
@@ -162,7 +162,9 @@ export default function ProductsPage() {
               >
                 Trang trước
               </button>
-              <span className="text-sm text-gray-600">Trang {page}</span>
+              <span className="text-sm text-gray-600">
+                Trang {page}/{totalPages}
+              </span>
               <button
                 type="button"
                 onClick={() =>

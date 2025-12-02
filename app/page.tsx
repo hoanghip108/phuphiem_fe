@@ -1,21 +1,72 @@
+'use client';
+
+import { useEffect, useState, useMemo } from 'react';
 import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import ImageCarousel from '@/components/ImageCarousel';
-import { mockProducts } from '@/lib/mockData';
+import { getProducts, getB2ImageUrl } from '@/lib/api';
+import type { Product } from '@/types/product';
 
 export default function Home() {
-  const featuredProducts = mockProducts.filter((p) => p.featured);
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [carouselImageUrls, setCarouselImageUrls] = useState<
+    Record<string, string>
+  >({});
 
-  // Tạo slides cho carousel từ featured products
-  const carouselSlides = featuredProducts.map((product) => ({
-    id: product.id,
-    image:
-      'https://i.pinimg.com/736x/bf/ba/4d/bfba4df228e5639b62dce1aa764ecdf0.jpg',
-    title: 'Đồ Handmade Độc Đáo',
-    description:
-      'Khám phá bộ sưu tập các sản phẩm handmade được làm thủ công với tình yêu và sự tận tâm. Mỗi sản phẩm đều là một tác phẩm nghệ thuật độc nhất.',
-    link: `/products/${product.id}`,
-  }));
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        setLoading(true);
+        const res = await getProducts({ page: 1 });
+        // Lấy 8 sản phẩm đầu tiên để hiển thị trên trang chủ
+        setProducts(res.items.slice(0, 8));
+        setError('');
+
+        // Convert images cho carousel
+        const firstThree = res.items.slice(0, 3);
+        const urlMap: Record<string, string> = {};
+        await Promise.all(
+          firstThree.map(async (product) => {
+            if (product.image && !product.image.startsWith('http')) {
+              try {
+                const url = await getB2ImageUrl(product.image);
+                urlMap[product.id] = url;
+              } catch {
+                urlMap[product.id] = '/placeholder.jpg';
+              }
+            } else {
+              urlMap[product.id] = product.image || '/placeholder.jpg';
+            }
+          })
+        );
+        setCarouselImageUrls(urlMap);
+      } catch (err) {
+        console.error(err);
+        setError('Không thể tải sản phẩm. Vui lòng thử lại sau.');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
+  // Tạo slides cho carousel từ products với URL đã convert
+  const carouselSlides = useMemo(
+    () =>
+      products.slice(0, 3).map((product) => ({
+        id: product.id,
+        image:
+          carouselImageUrls[product.id] || product.image || '/placeholder.jpg',
+        title: 'Đồ Handmade Độc Đáo',
+        description:
+          'Khám phá bộ sưu tập các sản phẩm handmade được làm thủ công với tình yêu và sự tận tâm. Mỗi sản phẩm đều là một tác phẩm nghệ thuật độc nhất.',
+        link: `/products/${product.id}`,
+      })),
+    [products, carouselImageUrls]
+  );
 
   return (
     <div className="bg-white">
@@ -113,19 +164,33 @@ export default function Home() {
               Những sản phẩm được yêu thích nhất của chúng tôi
             </p>
           </div>
-          <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
-            {featuredProducts.map((product) => (
-              <ProductCard key={product.id} product={product} />
-            ))}
-          </div>
-          <div className="mt-12 text-center">
-            <Link
-              href="/products"
-              className="inline-block rounded-lg bg-rose-600 px-8 py-3 text-base font-semibold text-white transition-all hover:bg-rose-700"
-            >
-              Xem tất cả sản phẩm
-            </Link>
-          </div>
+          {loading ? (
+            <div className="py-12 text-center text-gray-600">
+              Đang tải sản phẩm...
+            </div>
+          ) : error ? (
+            <div className="py-12 text-center text-red-600">{error}</div>
+          ) : products.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-4">
+                {products.map((product) => (
+                  <ProductCard key={product.id} product={product} />
+                ))}
+              </div>
+              <div className="mt-12 text-center">
+                <Link
+                  href="/products"
+                  className="inline-block rounded-lg bg-rose-600 px-8 py-3 text-base font-semibold text-white transition-all hover:bg-rose-700"
+                >
+                  Xem tất cả sản phẩm
+                </Link>
+              </div>
+            </>
+          ) : (
+            <div className="py-12 text-center text-gray-600">
+              Chưa có sản phẩm nào
+            </div>
+          )}
         </div>
       </section>
     </div>

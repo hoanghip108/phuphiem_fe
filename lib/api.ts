@@ -283,17 +283,42 @@ export async function getProductById(id: string): Promise<Product> {
   }
 }
 
+/**
+ * Convert Backblaze B2 fileNamePrefix thành full URL với authorization
+ * @param fileNamePrefix - Ví dụ: "test-uploads/1764668600636-logo.png"
+ * @returns Promise<string> - Full URL với authorization token
+ */
+export async function getB2ImageUrl(fileNamePrefix: string): Promise<string> {
+  if (!fileNamePrefix) return '/placeholder.jpg';
+
+  try {
+    const response = await fetch(
+      `/api/b2/image?fileName=${encodeURIComponent(fileNamePrefix)}`
+    );
+    if (!response.ok) {
+      console.error('Failed to get B2 image URL:', fileNamePrefix);
+      return '/placeholder.jpg';
+    }
+    const data = (await response.json()) as { url: string };
+    return data.url;
+  } catch (error) {
+    console.error('Error getting B2 image URL:', error);
+    return '/placeholder.jpg';
+  }
+}
+
 function mapBackendProductToProduct(p: BackendProduct): Product {
   const firstVariant = p.variants[0];
   const priceNumber = firstVariant ? Number(firstVariant.price) : 0;
 
+  // images từ backend giờ là fileNamePrefix, giữ nguyên để convert sau khi render
   return {
     id: String(p.id),
     name: p.productName,
     description: p.description,
     price: priceNumber,
-    image: p.images[0] ?? '',
-    images: p.images,
+    image: p.images[0] ?? '', // fileNamePrefix, sẽ convert thành URL khi render
+    images: p.images, // Array of fileNamePrefix
     category: p.productCategory?.categoryName ?? 'Khác',
     inStock: true,
     featured: false,

@@ -1,9 +1,9 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import type { BackendProduct, BackendProductVariant } from '@/lib/api';
+import B2Image from '@/components/B2Image';
 import { useCart } from '@/components/CartContext';
 
 interface ProductDetailClientProps {
@@ -80,8 +80,8 @@ export default function ProductDetailClient({
           {/* Image Gallery */}
           <div>
             <div className="relative aspect-square overflow-hidden rounded-lg bg-gray-100">
-              <Image
-                src={product.images[0] || '/placeholder.jpg'}
+              <B2Image
+                fileNamePrefix={product.images[0] || ''}
                 alt={product.productName}
                 fill
                 className="object-cover"
@@ -96,8 +96,8 @@ export default function ProductDetailClient({
                     key={index}
                     className="relative aspect-square overflow-hidden rounded-lg bg-gray-100"
                   >
-                    <Image
-                      src={img}
+                    <B2Image
+                      fileNamePrefix={img}
                       alt={`${product.productName} ${index + 1}`}
                       fill
                       className="object-cover"
