@@ -1,7 +1,6 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 
 interface Slide {
@@ -47,73 +46,94 @@ export default function ImageCarousel({
     setCurrentIndex((prevIndex) => (prevIndex + 1) % slides.length);
   };
 
-  if (slides.length === 0) return null;
+  if (slides.length === 0) {
+    console.warn('ImageCarousel: No slides provided');
+    return null;
+  }
 
   return (
-    <div className="relative h-[500px] w-full overflow-hidden md:h-[600px] lg:h-[700px]">
+    <div className="relative h-[500px] w-full overflow-hidden bg-gray-900 md:h-[600px] lg:h-[700px]">
       {/* Slides */}
-      <div className="relative h-full">
+      <div className="relative h-full w-full">
         {slides.map((slide, index) => (
           <div
             key={slide.id}
-            className={`absolute inset-0 transition-opacity duration-1000 ${
-              index === currentIndex ? 'opacity-100' : 'opacity-0'
+            className={`absolute inset-0 ${
+              index === currentIndex ? 'z-10' : 'z-0 pointer-events-none'
             }`}
+            style={{
+              opacity: index === currentIndex ? 1 : 0,
+              transition: 'opacity 1s ease-in-out',
+              visibility: index === currentIndex ? 'visible' : 'hidden',
+            }}
           >
-            {slide.link ? (
-              <Link href={slide.link} className="block h-full">
-                <Image
-                  src="https://i.pinimg.com/736x/bf/ba/4d/bfba4df228e5639b62dce1aa764ecdf0.jpg"
-                  alt={slide.title || `Slide ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  priority={index === 0}
-                  sizes="100vw"
-                />
-                {(slide.title || slide.description) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                    <div className="text-center text-white">
-                      {slide.title && (
-                        <h2 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
-                          {slide.title}
-                        </h2>
-                      )}
-                      {slide.description && (
-                        <p className="mx-auto max-w-2xl text-lg md:text-xl">
-                          {slide.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </Link>
-            ) : (
-              <>
-                <Image
-                  src={slide.image}
-                  alt={slide.title || `Slide ${index + 1}`}
-                  fill
-                  className="object-cover"
-                  priority={index === 0}
-                  sizes="100vw"
-                />
-                {(slide.title || slide.description) && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-30">
-                    <div className="text-center text-white">
-                      {slide.title && (
-                        <h2 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
-                          {slide.title}
-                        </h2>
-                      )}
-                      {slide.description && (
-                        <p className="mx-auto max-w-2xl text-lg md:text-xl">
-                          {slide.description}
-                        </p>
-                      )}
-                    </div>
-                  </div>
-                )}
-              </>
+            {/* Image - đảm bảo luôn hiển thị với opacity 1 */}
+            <img
+              src={slide.image}
+              alt={slide.title || `Slide ${index + 1}`}
+              className="absolute inset-0 h-full w-full object-cover"
+              style={{
+                display: 'block',
+                width: '100%',
+                height: '100%',
+                objectFit: 'cover',
+                opacity: index === currentIndex ? 1 : 0,
+                transition: 'opacity 1s ease-in-out',
+                zIndex: 1,
+              }}
+              onError={(e) => {
+                console.error('Image load error:', slide.image, e);
+                const target = e.target as HTMLImageElement;
+                target.style.backgroundColor = '#1f2937';
+              }}
+              onLoad={(e) => {
+                console.log(
+                  'Image loaded successfully:',
+                  slide.image,
+                  'Index:',
+                  index,
+                  'Current:',
+                  currentIndex
+                );
+                const target = e.target as HTMLImageElement;
+                // Force opacity to 1 if this is the current slide
+                if (index === currentIndex) {
+                  target.style.setProperty('opacity', '1', 'important');
+                }
+              }}
+            />
+            {/* Overlay with text - chỉ hiển thị khi slide active */}
+            {index === currentIndex && (slide.title || slide.description) && (
+              <div
+                className="absolute inset-0 flex items-center justify-center"
+                style={{
+                  background:
+                    'linear-gradient(to bottom, rgba(0,0,0,0.3), rgba(0,0,0,0.3))',
+                  zIndex: 10,
+                }}
+              >
+                <div className="text-center text-white">
+                  {slide.title && (
+                    <h2 className="mb-4 text-3xl font-bold md:text-4xl lg:text-5xl">
+                      {slide.title}
+                    </h2>
+                  )}
+                  {slide.description && (
+                    <p className="mx-auto max-w-2xl text-lg md:text-xl">
+                      {slide.description}
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
+            {/* Clickable link overlay - chỉ click được khi slide active */}
+            {slide.link && index === currentIndex && (
+              <Link
+                href={slide.link}
+                className="absolute inset-0 z-20"
+                aria-label={slide.title || `Go to ${slide.link}`}
+                style={{ zIndex: 20 }}
+              />
             )}
           </div>
         ))}
@@ -124,8 +144,9 @@ export default function ImageCarousel({
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
+            className="absolute left-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
             aria-label="Previous slide"
+            style={{ zIndex: 30 }}
           >
             <svg
               className="h-6 w-6"
@@ -143,8 +164,9 @@ export default function ImageCarousel({
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
+            className="absolute right-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
             aria-label="Next slide"
+            style={{ zIndex: 30 }}
           >
             <svg
               className="h-6 w-6"
@@ -165,7 +187,10 @@ export default function ImageCarousel({
 
       {/* Dots Indicator */}
       {slides.length > 1 && (
-        <div className="absolute bottom-4 left-1/2 flex -translate-x-1/2 gap-2">
+        <div
+          className="absolute bottom-4 left-1/2 z-30 flex -translate-x-1/2 gap-2"
+          style={{ zIndex: 30 }}
+        >
           {slides.map((_, index) => (
             <button
               key={index}
@@ -182,7 +207,10 @@ export default function ImageCarousel({
       )}
 
       {/* CTA Buttons */}
-      <div className="absolute bottom-20 left-1/2 flex -translate-x-1/2 gap-4">
+      <div
+        className="absolute bottom-20 left-1/2 z-30 flex -translate-x-1/2 gap-4"
+        style={{ zIndex: 30 }}
+      >
         <Link
           href="/products"
           className="rounded-lg bg-rose-600 px-8 py-3 text-base font-semibold text-white shadow-lg transition-all hover:bg-rose-700 hover:shadow-xl"
@@ -191,7 +219,7 @@ export default function ImageCarousel({
         </Link>
         <Link
           href="/about"
-          className="rounded-lg border-2 border-white bg-white bg-opacity-20 px-8 py-3 text-base font-semibold text-white backdrop-blur-sm transition-all hover:bg-opacity-30"
+          className="rounded-lg border-2 border-white bg-white px-8 py-3 text-base font-semibold text-black transition-all hover:bg-gray-100"
         >
           Về chúng tôi
         </Link>

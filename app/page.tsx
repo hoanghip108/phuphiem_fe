@@ -5,7 +5,7 @@ import Link from 'next/link';
 import ProductCard from '@/components/ProductCard';
 import ProductCardSkeleton from '@/components/ProductCardSkeleton';
 import ImageCarousel from '@/components/ImageCarousel';
-import { getProducts, buildB2ImageUrl } from '@/lib/api';
+import { getProducts } from '@/lib/api';
 import { useB2Token } from '@/contexts/B2TokenContext';
 import type { Product } from '@/types/product';
 
@@ -14,9 +14,6 @@ export default function Home() {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [carouselImageUrls, setCarouselImageUrls] = useState<
-    Record<string, string>
-  >({});
 
   useEffect(() => {
     const fetchProducts = async () => {
@@ -26,18 +23,6 @@ export default function Home() {
         // Lấy 8 sản phẩm đầu tiên để hiển thị trên trang chủ
         setProducts(res.items.slice(0, 8));
         setError('');
-
-        // Convert images cho carousel (dùng token từ context)
-        const firstThree = res.items.slice(0, 3);
-        const urlMap: Record<string, string> = {};
-        firstThree.forEach((product) => {
-          if (product.image && !product.image.startsWith('http')) {
-            urlMap[product.id] = buildB2ImageUrl(product.image, token);
-          } else {
-            urlMap[product.id] = product.image || '/placeholder.jpg';
-          }
-        });
-        setCarouselImageUrls(urlMap);
       } catch (err) {
         console.error(err);
         setError('Không thể tải sản phẩm. Vui lòng thử lại sau.');
@@ -52,26 +37,61 @@ export default function Home() {
     }
   }, [token]);
 
-  // Tạo slides cho carousel từ products với URL đã convert
+  // Tạo slides cho carousel với ảnh tĩnh 1.jpg, 2.jpg, 3.jpg
   const carouselSlides = useMemo(
-    () =>
-      products.slice(0, 3).map((product) => ({
-        id: product.id,
-        image:
-          carouselImageUrls[product.id] || product.image || '/placeholder.jpg',
+    () => [
+      {
+        id: 'slide-1',
+        image: '/1.jpg',
         title: 'Đồ Handmade Độc Đáo',
         description:
           'Khám phá bộ sưu tập các sản phẩm handmade được làm thủ công với tình yêu và sự tận tâm. Mỗi sản phẩm đều là một tác phẩm nghệ thuật độc nhất.',
-        link: `/products/${product.id}`,
-      })),
-    [products, carouselImageUrls]
+        link: '/products',
+      },
+      {
+        id: 'slide-2',
+        image: '/2.jpg',
+        title: 'Chất Lượng Cao',
+        description:
+          'Mỗi sản phẩm đều được kiểm tra kỹ lưỡng để đảm bảo chất lượng tốt nhất, mang đến trải nghiệm tuyệt vời cho khách hàng.',
+        link: '/products',
+      },
+      {
+        id: 'slide-3',
+        image: '/3.jpg',
+        title: 'Giao Hàng Nhanh',
+        description:
+          'Giao hàng toàn quốc với dịch vụ nhanh chóng và đáng tin cậy, đảm bảo sản phẩm đến tay bạn trong thời gian ngắn nhất.',
+        link: '/products',
+      },
+    ],
+    []
   );
+
+  // Debug: log carousel slides
+  useEffect(() => {
+    console.log('Carousel slides:', carouselSlides);
+    // Test image loading
+    carouselSlides.forEach((slide) => {
+      const img = new Image();
+      img.onload = () => console.log('✅ Image can be loaded:', slide.image);
+      img.onerror = () =>
+        console.error('❌ Image cannot be loaded:', slide.image);
+      img.src = slide.image;
+    });
+  }, [carouselSlides]);
 
   return (
     <div className="bg-white">
       {/* Hero Carousel Section */}
       <section className="relative">
-        <ImageCarousel slides={carouselSlides} autoPlayInterval={5000} />
+        {carouselSlides.length > 0 ? (
+          <ImageCarousel slides={carouselSlides} autoPlayInterval={5000} />
+        ) : (
+          <div className="h-[500px] flex items-center justify-center bg-gray-100">
+            <p className="text-gray-600">Đang tải carousel...</p>
+          </div>
+        )}
       </section>
 
       {/* Features Section */}

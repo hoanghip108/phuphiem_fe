@@ -284,10 +284,28 @@ export async function getProductById(id: string): Promise<Product> {
 }
 
 const B2_DOWNLOAD_URL = 'https://f005.backblazeb2.com/file/Phuphiem';
+const B2_FILE_PREFIX = 'test-uploads/';
+
+/**
+ * Normalize fileNamePrefix - tự động thêm prefix nếu chưa có
+ * @param fileName - Tên file hoặc path (có thể có hoặc không có prefix)
+ * @returns string - File path với prefix đầy đủ
+ */
+function normalizeB2FileName(fileName: string): string {
+  if (!fileName) return '';
+
+  // Nếu đã có prefix hoặc là full URL, return nguyên
+  if (fileName.startsWith('http') || fileName.startsWith('test-uploads/')) {
+    return fileName;
+  }
+
+  // Tự động thêm prefix
+  return `${B2_FILE_PREFIX}${fileName}`;
+}
 
 /**
  * Build Backblaze B2 image URL từ fileNamePrefix và token
- * @param fileNamePrefix - Ví dụ: "test-uploads/1764668600636-logo.png"
+ * @param fileNamePrefix - Ví dụ: "1764668600636-logo.png" hoặc "test-uploads/1764668600636-logo.png"
  * @param token - Authorization token từ B2 API
  * @returns string - Full URL với authorization token
  */
@@ -296,7 +314,9 @@ export function buildB2ImageUrl(
   token: string | null
 ): string {
   if (!fileNamePrefix || !token) return '/placeholder.jpg';
-  return `${B2_DOWNLOAD_URL}/${fileNamePrefix}?Authorization=${token}`;
+
+  const normalizedPath = normalizeB2FileName(fileNamePrefix);
+  return `${B2_DOWNLOAD_URL}/${normalizedPath}?Authorization=${token}`;
 }
 
 function mapBackendProductToProduct(p: BackendProduct): Product {
