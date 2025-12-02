@@ -1,0 +1,15 @@
+version: "3.9"
+
+services:
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: phuphiem_fe_web
+    ports:
+      - "3000:3000"
+    environment:
+      # Bạn có thể override các biến env ở đây hoặc dùng .env.production
+      NEXT_PUBLIC_AUTH_API_URL: ${NEXT_PUBLIC_AUTH_API_URL:-http://localhost:8386/api/v1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8386/api}
+    restart: unless-stopped
