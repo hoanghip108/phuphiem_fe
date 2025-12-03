@@ -399,3 +399,52 @@ export async function submitContactForm(data: {
     throw error;
   }
 }
+
+export interface VnpayPaymentRequest {
+  bankCode: string;
+  locale: string;
+  productVariants: Array<{
+    variantId: number;
+    quantity: number;
+  }>;
+  note?: string;
+}
+
+export interface VnpayPaymentResponse {
+  paymentUrl?: string;
+  orderId?: string;
+  [key: string]: unknown;
+}
+
+/**
+ * Tạo thanh toán VNPay
+ */
+export async function createVnpayPayment(
+  payload: VnpayPaymentRequest,
+  accessToken: string
+): Promise<VnpayPaymentResponse> {
+  const response = await fetch(`${AUTH_BASE_URL}/payment/vnpay/create`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  let data: Record<string, unknown> | null = null;
+  try {
+    data = (await response.json()) as Record<string, unknown>;
+  } catch {
+    // ignore JSON parse errors
+  }
+
+  if (!response.ok) {
+    const message =
+      (data && (data.message as string)) ||
+      'Không thể tạo thanh toán. Vui lòng thử lại.';
+    throw new Error(message);
+  }
+
+  return data as VnpayPaymentResponse;
+}

@@ -130,9 +130,9 @@ export default function ImageCarousel({
             {slide.link && index === currentIndex && (
               <Link
                 href={slide.link}
-                className="absolute inset-0 z-20"
+                className="absolute inset-0 z-20 cursor-pointer"
                 aria-label={slide.title || `Go to ${slide.link}`}
-                style={{ zIndex: 20 }}
+                style={{ zIndex: 20, cursor: 'pointer' }}
               />
             )}
           </div>
@@ -144,9 +144,9 @@ export default function ImageCarousel({
         <>
           <button
             onClick={goToPrevious}
-            className="absolute left-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
+            className="absolute left-4 top-1/2 z-30 -translate-y-1/2 cursor-pointer rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600 hover:scale-110 active:scale-95"
             aria-label="Previous slide"
-            style={{ zIndex: 30 }}
+            style={{ zIndex: 30, cursor: 'pointer' }}
           >
             <svg
               className="h-6 w-6"
@@ -164,9 +164,9 @@ export default function ImageCarousel({
           </button>
           <button
             onClick={goToNext}
-            className="absolute right-4 top-1/2 z-30 -translate-y-1/2 rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600"
+            className="absolute right-4 top-1/2 z-30 -translate-y-1/2 cursor-pointer rounded-full bg-white bg-opacity-80 p-2 text-gray-800 transition-all hover:bg-opacity-100 hover:text-rose-600 hover:scale-110 active:scale-95"
             aria-label="Next slide"
-            style={{ zIndex: 30 }}
+            style={{ zIndex: 30, cursor: 'pointer' }}
           >
             <svg
               className="h-6 w-6"
@@ -195,12 +195,13 @@ export default function ImageCarousel({
             <button
               key={index}
               onClick={() => goToSlide(index)}
-              className={`h-2 rounded-full transition-all ${
+              className={`h-2 cursor-pointer rounded-full transition-all ${
                 index === currentIndex
                   ? 'w-8 bg-white'
-                  : 'w-2 bg-white bg-opacity-50 hover:bg-opacity-75'
+                  : 'w-2 bg-white bg-opacity-50 hover:bg-opacity-75 hover:scale-125'
               }`}
               aria-label={`Go to slide ${index + 1}`}
+              style={{ cursor: 'pointer' }}
             />
           ))}
         </div>
@@ -213,13 +214,15 @@ export default function ImageCarousel({
       >
         <Link
           href="/products"
-          className="rounded-lg bg-rose-600 px-8 py-3 text-base font-semibold text-white shadow-lg transition-all hover:bg-rose-700 hover:shadow-xl"
+          className="cursor-pointer rounded-lg bg-rose-600 px-8 py-3 text-base font-semibold text-white shadow-lg transition-all hover:bg-rose-700 hover:shadow-xl hover:scale-105 active:scale-95"
+          style={{ cursor: 'pointer' }}
         >
           Xem sản phẩm
         </Link>
         <Link
           href="/about"
-          className="rounded-lg border-2 border-white bg-white px-8 py-3 text-base font-semibold text-black transition-all hover:bg-gray-100"
+          className="cursor-pointer rounded-lg border-2 border-white bg-white px-8 py-3 text-base font-semibold text-black transition-all hover:bg-gray-100 hover:scale-105 active:scale-95"
+          style={{ cursor: 'pointer' }}
         >
           Về chúng tôi
         </Link>

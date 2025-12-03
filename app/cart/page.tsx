@@ -1,9 +1,13 @@
 'use client';
 
 import Link from 'next/link';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
+import { createVnpayPayment } from '@/lib/api';
 
 export default function CartPage() {
+  const router = useRouter();
   const {
     items: cartItems,
     totalAmount,
@@ -11,12 +15,82 @@ export default function CartPage() {
     clearCart,
     updateQuantity,
   } = useCart();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
       style: 'currency',
       currency: 'VND',
     }).format(price);
+  };
+
+  const handlePayment = async () => {
+    if (cartItems.length === 0) {
+      setError('Giỏ hàng của bạn đang trống');
+      return;
+    }
+
+    // Kiểm tra đăng nhập
+    if (typeof window === 'undefined') return;
+    const accessToken = localStorage.getItem('accessToken');
+    if (!accessToken) {
+      setError('Vui lòng đăng nhập để thanh toán');
+      router.push('/login');
+      return;
+    }
+
+    // Kiểm tra variantId có đầy đủ không
+    const itemsWithoutVariant = cartItems.filter(
+      (item) => !item.variantId
+    );
+    if (itemsWithoutVariant.length > 0) {
+      setError(
+        'Một số sản phẩm chưa có thông tin biến thể. Vui lòng kiểm tra lại.'
+      );
+      return;
+    }
+
+    setIsProcessing(true);
+    setError(null);
+
+    try {
+      // Map cartItems sang format productVariants
+      const productVariants = cartItems.map((item) => ({
+        variantId: item.variantId!,
+        quantity: item.quantity,
+      }));
+
+      // Gọi API tạo thanh toán VNPay
+      const response = await createVnpayPayment(
+        {
+          bankCode: 'NCB',
+          locale: 'vn',
+          productVariants,
+          note: 'Đơn hàng từ website',
+        },
+        accessToken
+      );
+
+      // Nếu có paymentUrl, redirect đến trang thanh toán VNPay
+      if (response.paymentUrl) {
+        window.location.href = response.paymentUrl;
+      } else {
+        // Nếu không có paymentUrl, có thể redirect đến trang success với orderId
+        const orderId = response.orderId || '';
+        router.push(
+          `/payment/success?orderId=${orderId}&amount=${totalAmount}`
+        );
+      }
+    } catch (err) {
+      console.error('Payment error:', err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.'
+      );
+      setIsProcessing(false);
+    }
   };
 
   return (
@@ -149,8 +223,17 @@ export default function CartPage() {
                     </div>
                   </div>
                 </div>
-                <button className="mt-6 w-full rounded-lg bg-rose-600 px-6 py-3 text-base font-semibold text-white transition-all hover:bg-rose-700">
-                  Thanh toán
+                {error && (
+                  <div className="mt-4 rounded-lg bg-red-50 p-3 text-sm text-red-600">
+                    {error}
+                  </div>
+                )}
+                <button
+                  onClick={handlePayment}
+                  disabled={isProcessing || cartItems.length === 0}
+                  className="mt-6 w-full rounded-lg bg-rose-600 px-6 py-3 text-base font-semibold text-white transition-all hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isProcessing ? 'Đang xử lý...' : 'Thanh toán'}
                 </button>
               </div>
             </div>
