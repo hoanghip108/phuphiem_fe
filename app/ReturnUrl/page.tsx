@@ -1,9 +1,9 @@
 'use client';
 
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 
-export default function VnpayReturnPage() {
+function VnpayReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>(
@@ -109,6 +109,23 @@ export default function VnpayReturnPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function VnpayReturnPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="flex min-h-screen items-center justify-center bg-white">
+          <div className="text-center">
+            <div className="mx-auto mb-4 h-12 w-12 animate-spin rounded-full border-4 border-gray-200 border-t-rose-600"></div>
+            <p className="text-gray-600">Đang xử lý kết quả thanh toán...</p>
+          </div>
+        </div>
+      }
+    >
+      <VnpayReturnContent />
+    </Suspense>
   );
 }
 
