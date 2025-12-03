@@ -5,7 +5,6 @@ import { useEffect, useState, Suspense } from 'react';
 
 // Force dynamic rendering for this route
 export const dynamic = 'force-dynamic';
-export const revalidate = 0;
 
 function VnpayReturnContent() {
   const router = useRouter();
