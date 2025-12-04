@@ -8,6 +8,10 @@ primary_region = 'sin'
 
 [build]
 
+[env]
+  NEXT_PUBLIC_AUTH_API_URL = "https://phuphiem-api.site/api/v1"
+  NEXT_PUBLIC_API_URL = "https://phuphiem-api.site/api"
+
 [http_service]
   internal_port = 3000
   force_https = true
