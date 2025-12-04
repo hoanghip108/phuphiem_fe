@@ -55,6 +55,18 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  async rewrites() {
+    return [
+      {
+        source: '/ReturnUrl',
+        destination: '/returnurl',
+      },
+      {
+        source: '/ReturnUrl/:path*',
+        destination: '/returnurl/:path*',
+      },
+    ];
+  },
 };
 
 export default nextConfig;

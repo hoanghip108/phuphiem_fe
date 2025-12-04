@@ -17,15 +17,20 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  // Match common case variations - middleware will handle case-insensitive redirect
-  // Note: Next.js matcher is case-sensitive, so we list common variations
+  // Match both exact path and path with segments for all case variations
   matcher: [
     '/ReturnUrl',
-    '/returnurl', 
+    '/ReturnUrl/:path*',
+    '/returnurl',
+    '/returnurl/:path*',
     '/RETURNURL',
+    '/RETURNURL/:path*',
     '/ReturnURL',
+    '/ReturnURL/:path*',
     '/returnUrl',
+    '/returnUrl/:path*',
     '/Returnurl',
+    '/Returnurl/:path*',
   ],
 };
 
