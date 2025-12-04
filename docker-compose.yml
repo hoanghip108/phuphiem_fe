@@ -10,6 +10,6 @@ services:
       - "3000:3000"
     environment:
       # Bạn có thể override các biến env ở đây hoặc dùng .env.production
-      NEXT_PUBLIC_AUTH_API_URL: ${NEXT_PUBLIC_AUTH_API_URL:-http://localhost:8386/api/v1}
-      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8386/api}
+      NEXT_PUBLIC_AUTH_API_URL: ${NEXT_PUBLIC_AUTH_API_URL:-https://phuphiem-api.site/api/v1}
+      NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-https://phuphiem-api.site/api/v1}
     restart: unless-stopped
