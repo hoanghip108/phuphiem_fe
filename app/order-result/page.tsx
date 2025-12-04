@@ -3,8 +3,6 @@
 import { useSearchParams, useRouter } from 'next/navigation';
 import { useEffect, useState, Suspense } from 'react';
 
-export const dynamic = 'force-dynamic';
-
 function VnpayReturnContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
