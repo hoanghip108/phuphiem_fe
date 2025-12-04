@@ -2,11 +2,11 @@ import { Product } from '@/types/product';
 
 // TODO: Thay thế base URL bằng API endpoint thực tế cho các dịch vụ khác nhau
 const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001/api';
+  process.env.NEXT_PUBLIC_API_URL || 'https://phuphiem-api.site/api/v1';
 
 // Auth & Product API base URL
 const AUTH_BASE_URL =
-  process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8386/api/v1';
+  process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://phuphiem-api.site/api/v1';
 
 export interface AuthUser {
   id: number;

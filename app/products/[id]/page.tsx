@@ -26,7 +26,7 @@ export default async function ProductDetailPage(props: ProductDetailPageProps) {
 
 async function fetchProductDetail(id: string): Promise<BackendProduct> {
   const response = await fetch(
-    `${process.env.NEXT_PUBLIC_AUTH_API_URL || 'http://localhost:8386/api/v1'}/products/${id}`,
+    `${process.env.NEXT_PUBLIC_AUTH_API_URL || 'https://phuphiem-api.site/api/v1'}/products/${id}`,
     {
       cache: 'no-store',
     }
