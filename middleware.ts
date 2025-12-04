@@ -2,8 +2,11 @@ import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
 export function middleware(request: NextRequest) {
-  // Redirect /ReturnUrl to /returnurl (lowercase) to handle case sensitivity issues
-  if (request.nextUrl.pathname === '/ReturnUrl') {
+  const pathname = request.nextUrl.pathname;
+  
+  // Redirect any case variation of /ReturnUrl to /returnurl (lowercase) to handle case sensitivity issues
+  // This handles /ReturnUrl, /returnurl, /RETURNURL, etc.
+  if (pathname.toLowerCase() === '/returnurl' && pathname !== '/returnurl') {
     const url = request.nextUrl.clone();
     url.pathname = '/returnurl';
     // Preserve all query parameters
@@ -14,6 +17,16 @@ export function middleware(request: NextRequest) {
 }
 
 export const config = {
-  matcher: '/ReturnUrl',
+  // Match common case variations - middleware will handle case-insensitive redirect
+  // Note: Next.js matcher is case-sensitive, so we list common variations
+  matcher: [
+    '/ReturnUrl',
+    '/returnurl', 
+    '/RETURNURL',
+    '/ReturnURL',
+    '/returnUrl',
+    '/Returnurl',
+  ],
 };
+
 
