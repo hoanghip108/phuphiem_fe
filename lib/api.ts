@@ -39,6 +39,7 @@ export interface BackendProductVariant {
   updatedAt: string;
   size: string;
   price: string; // dạng "295000.00"
+  product?: BackendProduct;
 }
 
 export interface BackendProductCategory {
@@ -416,6 +417,16 @@ export interface VnpayPaymentResponse {
   [key: string]: unknown;
 }
 
+export interface BackendCartItem {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  variant: BackendProductVariant & {
+    product?: BackendProduct;
+  };
+  quantity: number;
+}
+
 /**
  * Tạo thanh toán VNPay
  */
@@ -447,4 +458,71 @@ export async function createVnpayPayment(
   }
 
   return data as VnpayPaymentResponse;
+}
+
+/**
+ * Lấy giỏ hàng của người dùng
+ */
+export async function getCartItems(
+  accessToken: string
+): Promise<BackendCartItem[]> {
+  const response = await fetch(`${AUTH_BASE_URL}/carts`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const message =
+      response.status === 401
+        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+        : 'Không thể tải giỏ hàng từ máy chủ.';
+    throw new Error(message);
+  }
+
+  // Backend có thể trả 204 No Content hoặc body rỗng khi giỏ hàng trống
+  const text = await response.text();
+  if (!text) {
+    return [];
+  }
+
+  try {
+    return JSON.parse(text) as BackendCartItem[];
+  } catch (error) {
+    console.error('Failed to parse cart items JSON:', error, 'raw:', text);
+    return [];
+  }
+}
+
+export interface UpdateCartPayload {
+  items: Array<{
+    variantId: number;
+    quantity: number;
+  }>;
+}
+
+/**
+ * Đồng bộ giỏ hàng lên server (được gọi khi đăng xuất)
+ */
+export async function updateCartItems(
+  payload: UpdateCartPayload,
+  accessToken: string
+): Promise<void> {
+  const response = await fetch(`${AUTH_BASE_URL}/carts`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    const message =
+      response.status === 401
+        ? 'Phiên đăng nhập đã hết hạn.'
+        : 'Không thể cập nhật giỏ hàng.';
+    throw new Error(message);
+  }
 }

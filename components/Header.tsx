@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { useEffect, useState } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
+import { updateCartItems } from '@/lib/api';
 
 interface HeaderUser {
   fullName?: string;
@@ -19,11 +20,35 @@ export default function Header() {
   const [user, setUser] = useState<HeaderUser | null>(null);
   const pathname = usePathname();
   const router = useRouter();
-  const { totalQuantity, clearCart } = useCart();
+  const { totalQuantity, clearCart, items: cartItems } = useCart();
 
-  const handleConfirmLogout = () => {
+  const handleConfirmLogout = async () => {
     setIsUserMenuOpen(false);
     setShowLogoutConfirm(false);
+    if (typeof window !== 'undefined') {
+      const token = localStorage.getItem('accessToken');
+
+      if (token) {
+        const payloadItems = cartItems
+          .filter(
+            (item) =>
+              item.variantId != null &&
+              !Number.isNaN(Number(item.variantId)) &&
+              item.quantity > 0
+          )
+          .map((item) => ({
+            variantId: Number(item.variantId),
+            quantity: item.quantity,
+          }));
+
+        try {
+          await updateCartItems({ items: payloadItems }, token);
+        } catch (error) {
+          console.error('Failed to sync cart before logout:', error);
+        }
+      }
+    }
+
     setIsLoggedIn(false);
     setUser(null);
     clearCart();

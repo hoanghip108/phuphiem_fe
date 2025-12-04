@@ -12,10 +12,13 @@ import type { CartItem } from '@/types/product';
 
 interface CartContextValue {
   items: CartItem[];
-  addItem: (item: Omit<CartItem, 'id' | 'quantity'> & { quantity?: number }) => void;
+  addItem: (
+    item: Omit<CartItem, 'id' | 'quantity'> & { quantity?: number }
+  ) => void;
   removeItem: (id: string) => void;
   clearCart: () => void;
   updateQuantity: (id: string, quantity: number) => void;
+  hydrateItems: (items: CartItem[]) => void;
   totalQuantity: number;
   totalAmount: number;
 }
@@ -122,12 +125,17 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     [items]
   );
 
+  const hydrateItems = useCallback((newItems: CartItem[]) => {
+    setItems(newItems);
+  }, []);
+
   const value: CartContextValue = {
     items,
     addItem,
     removeItem,
     clearCart,
     updateQuantity,
+    hydrateItems,
     totalQuantity,
     totalAmount,
   };
