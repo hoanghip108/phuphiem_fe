@@ -335,6 +335,7 @@ function mapBackendProductToProduct(p: BackendProduct): Product {
     category: p.productCategory?.categoryName ?? 'Khác',
     inStock: true,
     featured: false,
+    isColorMixingAvailable: p.isColorMixingAvailable,
   };
 }
 
@@ -409,6 +410,7 @@ export interface VnpayPaymentRequest {
     quantity: number;
   }>;
   note?: string;
+  orderId?: number;
 }
 
 export interface VnpayPaymentResponse {
@@ -502,6 +504,94 @@ export interface UpdateCartPayload {
   }>;
 }
 
+export interface CreateOrderPayload {
+  items: Array<{
+    variantId: number;
+    quantity: number;
+    note?: string | null;
+  }>;
+}
+
+export interface OrderResponse {
+  order: {
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+    status: string;
+    user: {
+      id: number;
+    };
+  };
+  orderDetails: Array<{
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+    order: {
+      id: number;
+      createdAt: string;
+      updatedAt: string;
+      status: string;
+      user: {
+        id: number;
+      };
+    };
+    variant: {
+      id: number;
+      createdAt: string;
+      updatedAt: string;
+      size: string;
+      price: string;
+    };
+    quantity: number;
+    unitPrice: string;
+    note: string | null;
+  }>;
+  totalAmount: number;
+}
+
+/**
+ * Tạo đơn hàng
+ */
+export async function createOrder(
+  payload: CreateOrderPayload,
+  accessToken: string
+): Promise<OrderResponse> {
+  console.log('[API] Creating order with payload:', payload);
+  
+  const response = await fetch(`${AUTH_BASE_URL}/orders`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  console.log('[API] Order response status:', response.status, response.statusText);
+
+  let data: Record<string, unknown> | null = null;
+  try {
+    const responseText = await response.text();
+    console.log('[API] Order response body (raw):', responseText);
+    data = JSON.parse(responseText) as Record<string, unknown>;
+    console.log('[API] Order response body (parsed):', data);
+  } catch (error) {
+    console.error('[API] Failed to parse order response:', error);
+    // ignore JSON parse errors
+  }
+
+  if (!response.ok) {
+    const message =
+      (data && (data.message as string)) ||
+      'Không thể tạo đơn hàng. Vui lòng thử lại.';
+    console.error('[API] Order creation failed:', message, data);
+    throw new Error(message);
+  }
+
+  console.log('[API] Order created successfully:', data);
+  return data as OrderResponse;
+}
+
 /**
  * Đồng bộ giỏ hàng lên server (được gọi khi đăng xuất)
  */
@@ -525,4 +615,52 @@ export async function updateCartItems(
         : 'Không thể cập nhật giỏ hàng.';
     throw new Error(message);
   }
+}
+
+export interface OrderDetail {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  variant: {
+    id: number;
+    createdAt: string;
+    updatedAt: string;
+    size: string;
+    price: string;
+  };
+  quantity: number;
+  unitPrice: string;
+  note: string | null;
+}
+
+export interface MyOrder {
+  id: number;
+  createdAt: string;
+  updatedAt: string;
+  status: string;
+  orderDetails: OrderDetail[];
+}
+
+/**
+ * Lấy danh sách đơn hàng của người dùng
+ */
+export async function getMyOrders(
+  accessToken: string
+): Promise<MyOrder[]> {
+  const response = await fetch(`${AUTH_BASE_URL}/orders/my-orders`, {
+    headers: {
+      Authorization: `Bearer ${accessToken}`,
+    },
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    const message =
+      response.status === 401
+        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+        : 'Không thể tải danh sách đơn hàng.';
+    throw new Error(message);
+  }
+
+  return response.json();
 }

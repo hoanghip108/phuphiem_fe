@@ -26,6 +26,11 @@ export default function ProductCard({ product }: ProductCardProps) {
             className="object-cover transition-transform duration-300 group-hover:scale-110"
             sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
           />
+          {product.isColorMixingAvailable && (
+            <span className="absolute right-2 top-2 rounded-full bg-gradient-to-r from-green-500 to-green-600 px-2 py-1 text-xs font-semibold text-white shadow-sm">
+              Pha màu
+            </span>
+          )}
           {product.featured && (
             <span className="absolute top-2 right-2 rounded-full bg-rose-600 px-2 py-1 text-xs font-semibold text-white">
               Nổi bật

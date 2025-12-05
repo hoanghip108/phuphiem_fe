@@ -17,6 +17,7 @@ export default function ProductDetailClient({
   const [selectedVariantId, setSelectedVariantId] = useState<number | null>(
     product.variants[0]?.id ?? null
   );
+  const [quantity, setQuantity] = useState(1);
 
   const selectedVariant: BackendProductVariant | undefined = useMemo(
     () => product.variants.find((v) => v.id === selectedVariantId),
@@ -51,8 +52,11 @@ export default function ProductDetailClient({
       variantId: variant.id,
       size: variant.size,
       price: Number(variant.price),
-      quantity: 1,
+      quantity,
+      isColorMixingAvailable: product.isColorMixingAvailable,
     });
+
+    setQuantity(1);
   };
 
   return (
@@ -89,7 +93,13 @@ export default function ProductDetailClient({
                 priority
                 sizes="(max-width: 1024px) 100vw, 50vw"
               />
+              {product.isColorMixingAvailable && (
+                <span className="absolute right-3 top-3 rounded-full bg-gradient-to-r from-green-500 to-green-600 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                  Pha màu
+                </span>
+              )}
             </div>
+
             {product.images.length > 1 && (
               <div className="mt-4 grid grid-cols-4 gap-4">
                 {product.images.map((img, index) => (
@@ -175,6 +185,33 @@ export default function ProductDetailClient({
 
             {/* Add to Cart Button */}
             <div className="space-y-4">
+              <div className="inline-flex items-center rounded-lg border border-gray-300">
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+                  className="px-4 py-2 text-lg text-gray-700 hover:bg-gray-100"
+                >
+                  -
+                </button>
+                <input
+                  type="number"
+                  min={1}
+                  value={quantity}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (!Number.isNaN(val) && val >= 1) setQuantity(val);
+                  }}
+                  className="w-16 border-l border-r border-gray-300 py-2 text-center text-lg text-black outline-none"
+                />
+                <button
+                  type="button"
+                  onClick={() => setQuantity((q) => q + 1)}
+                  className="px-4 py-2 text-lg text-gray-700 hover:bg-gray-100"
+                >
+                  +
+                </button>
+              </div>
+
               <button
                 disabled={!inStock}
                 onClick={handleAddToCart}
@@ -185,9 +222,6 @@ export default function ProductDetailClient({
                 }`}
               >
                 {inStock ? 'Thêm vào giỏ hàng' : 'Hết hàng'}
-              </button>
-              <button className="w-full rounded-lg border-2 border-rose-600 px-6 py-3 text-lg font-semibold text-rose-600 transition-all hover:bg-rose-50">
-                Yêu thích
               </button>
             </div>
 

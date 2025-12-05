@@ -55,6 +55,7 @@ export default function Header() {
     if (typeof window !== 'undefined') {
       localStorage.removeItem('accessToken');
       localStorage.removeItem('user');
+      localStorage.removeItem('cartItems'); // bảo đảm không còn dữ liệu giỏ hàng cũ sau khi đăng xuất
     }
     router.push('/');
   };

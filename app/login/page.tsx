@@ -1,12 +1,15 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { loginApi } from '@/lib/api';
+import { loginApi, getCartItems, type BackendCartItem } from '@/lib/api';
+import type { CartItem } from '@/types/product';
+import { useCart } from '@/components/CartContext';
 
 export default function LoginPage() {
   const router = useRouter();
+  const { hydrateItems } = useCart();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -17,6 +20,28 @@ export default function LoginPage() {
     email?: string;
     password?: string;
   }>({});
+
+  const mapBackendCartItemToCartItem = useCallback(
+    (backendItem: BackendCartItem): CartItem => {
+      const product = backendItem.variant.product;
+      const priceNumber = Number(backendItem.variant.price);
+      const productId = product?.id ?? backendItem.variant.id;
+      const variantId = backendItem.variant.id;
+      const lineId = `${productId}-${variantId ?? 'default'}`;
+
+      return {
+        id: lineId,
+        productId,
+        productName: product?.productName ?? 'Sản phẩm',
+        image: product?.images?.[0] ?? '',
+        variantId,
+        size: backendItem.variant.size,
+        price: Number.isNaN(priceNumber) ? 0 : priceNumber,
+        quantity: backendItem.quantity,
+      };
+    },
+    []
+  );
 
   const validateForm = () => {
     const errors: { email?: string; password?: string } = {};
@@ -66,6 +91,17 @@ export default function LoginPage() {
 
         if (accessToken) {
           localStorage.setItem('accessToken', accessToken);
+
+          // Hydrate cart ngay sau khi đăng nhập (nếu backend có dữ liệu)
+          try {
+            const serverItems = await getCartItems(accessToken);
+            const mapped = serverItems.map(mapBackendCartItemToCartItem);
+            if (mapped.length > 0) {
+              hydrateItems(mapped);
+            }
+          } catch (cartErr) {
+            console.error('Failed to hydrate cart after login:', cartErr);
+          }
         }
 
         if (maybeResponse.user && typeof maybeResponse.user === 'object') {

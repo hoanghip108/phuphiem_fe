@@ -18,6 +18,7 @@ interface CartContextValue {
   removeItem: (id: string) => void;
   clearCart: () => void;
   updateQuantity: (id: string, quantity: number) => void;
+  updateNote: (id: string, note: string) => void;
   hydrateItems: (items: CartItem[]) => void;
   totalQuantity: number;
   totalAmount: number;
@@ -85,6 +86,8 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
             size: item.size,
             price: item.price,
             quantity: qty,
+            note: item.note,
+            isColorMixingAvailable: item.isColorMixingAvailable,
           },
         ];
       });
@@ -115,6 +118,19 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     );
   }, []);
 
+  const updateNote = useCallback((id: string, note: string) => {
+    setItems((prev) =>
+      prev.map((item) =>
+        item.id === id
+          ? {
+              ...item,
+              note,
+            }
+          : item
+      )
+    );
+  }, []);
+
   const totalQuantity = useMemo(
     () => items.reduce((sum, item) => sum + item.quantity, 0),
     [items]
@@ -135,6 +151,7 @@ export function CartProvider({ children }: { children: React.ReactNode }) {
     removeItem,
     clearCart,
     updateQuantity,
+    updateNote,
     hydrateItems,
     totalQuantity,
     totalAmount,

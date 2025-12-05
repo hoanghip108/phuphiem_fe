@@ -8,6 +8,7 @@ export interface Product {
   category: string;
   inStock: boolean;
   featured?: boolean;
+  isColorMixingAvailable?: boolean;
 }
 
 export interface CartItem {
@@ -19,4 +20,6 @@ export interface CartItem {
   size?: string;
   price: number;
   quantity: number;
+  note?: string;
+  isColorMixingAvailable?: boolean;
 }

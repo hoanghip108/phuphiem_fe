@@ -1,11 +1,12 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/components/CartContext';
 import {
   createVnpayPayment,
+  createOrder,
   getCartItems,
   getCurrentUser,
   UserDetail,
@@ -22,6 +23,7 @@ export default function CartPage() {
     removeItem,
     clearCart,
     updateQuantity,
+    updateNote,
     hydrateItems,
   } = useCart();
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,16 +45,21 @@ export default function CartPage() {
   ): CartItem => {
     const product = backendItem.variant.product;
     const priceNumber = Number(backendItem.variant.price);
+    const productId = product?.id ?? backendItem.variant.id;
+    const variantId = backendItem.variant.id;
+    const lineId = `${productId}-${variantId ?? 'default'}`;
 
     return {
-      id: String(backendItem.id),
-      productId: product?.id ?? backendItem.variant.id,
+      id: lineId,
+      productId,
       productName: product?.productName ?? 'Sản phẩm',
       image: product?.images?.[0] ?? '',
-      variantId: backendItem.variant.id,
+      variantId,
       size: backendItem.variant.size,
       price: Number.isNaN(priceNumber) ? 0 : priceNumber,
       quantity: backendItem.quantity,
+      note: undefined,
+      isColorMixingAvailable: product?.isColorMixingAvailable,
     };
   };
 
@@ -66,6 +73,29 @@ export default function CartPage() {
     () => cartItems.filter((item) => selectedIds.includes(item.id)),
     [cartItems, selectedIds]
   );
+
+  // Helpers to track last synced quantity per line to avoid double-counting
+  const getSyncedQuantities = useCallback((): Record<string, number> => {
+    if (typeof window === 'undefined') return {};
+    try {
+      const raw = localStorage.getItem('cartSyncedQuantities');
+      if (!raw) return {};
+      const parsed = JSON.parse(raw) as Record<string, number>;
+      if (parsed && typeof parsed === 'object') return parsed;
+    } catch {
+      // ignore
+    }
+    return {};
+  }, []);
+
+  const setSyncedQuantities = useCallback((map: Record<string, number>) => {
+    if (typeof window === 'undefined') return;
+    try {
+      localStorage.setItem('cartSyncedQuantities', JSON.stringify(map));
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const selectedTotalAmount = useMemo(
     () =>
@@ -90,15 +120,55 @@ export default function CartPage() {
     setIsLoadingCart(true);
     setCartError(null);
 
+    const syncedQuantities = getSyncedQuantities();
+
     getCartItems(token)
       .then((items) => {
         const mapped = items.map(mapBackendCartItemToCartItem);
 
-        // Chỉ hydrate từ server nếu backend thực sự có dữ liệu giỏ hàng.
-        // Nếu backend đang rỗng nhưng local đã có items (vừa thêm từ trang sản phẩm),
-        // thì giữ nguyên local để không bị "reset" giỏ hàng.
+        // Nếu server có dữ liệu: merge server + local với delta để tránh double
         if (mapped.length > 0) {
-          hydrateItems(mapped);
+          const serverMap = new Map<string, CartItem>();
+          mapped.forEach((item) => serverMap.set(item.id, item));
+
+          const mergedMap = new Map<string, CartItem>();
+
+          // Start with server data
+          serverMap.forEach((item, id) => mergedMap.set(id, { ...item }));
+
+          // Merge local: cộng thêm delta (local - lastSynced), giữ note từ local nếu có
+          cartItems.forEach((localItem) => {
+            const existing = mergedMap.get(localItem.id);
+            if (existing) {
+              const lastSynced = syncedQuantities[localItem.id] ?? 0;
+              const delta = Math.max(localItem.quantity - lastSynced, 0);
+              mergedMap.set(localItem.id, {
+                ...existing,
+                quantity: existing.quantity + delta,
+                note: localItem.note ?? existing.note,
+              });
+            } else {
+              mergedMap.set(localItem.id, localItem);
+            }
+          });
+
+          const merged = Array.from(mergedMap.values());
+          // Lưu lại quantity đã hợp nhất làm mốc sync lần sau
+          const nextSynced: Record<string, number> = {};
+          merged.forEach((item) => {
+            nextSynced[item.id] = item.quantity;
+          });
+          setSyncedQuantities(nextSynced);
+
+          hydrateItems(merged);
+        }
+        // Nếu server rỗng -> giữ nguyên local, đồng thời cập nhật mốc synced = local hiện tại
+        else {
+          const nextSynced: Record<string, number> = {};
+          cartItems.forEach((item) => {
+            nextSynced[item.id] = item.quantity;
+          });
+          setSyncedQuantities(nextSynced);
         }
       })
       .catch((err) => {
@@ -112,7 +182,13 @@ export default function CartPage() {
       .finally(() => {
         setIsLoadingCart(false);
       });
-  }, [hydrateItems]);
+  }, [
+    hydrateItems,
+    mapBackendCartItemToCartItem,
+    cartItems,
+    getSyncedQuantities,
+    setSyncedQuantities,
+  ]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('vi-VN', {
@@ -193,31 +269,54 @@ export default function CartPage() {
     setShowConfirmModal(false);
 
     try {
-      // Map selectedItems sang format productVariants
+      // Map selectedItems sang format items cho API tạo order
+      const orderItems = selectedItems.map((item) => ({
+        variantId: item.variantId!,
+        quantity: item.quantity,
+        note: item.note && item.note.trim() ? item.note.trim() : null,
+      }));
+
+      console.log('[Cart] Creating order with items:', orderItems);
+
+      // Bước 1: Tạo order
+      const orderResponse = await createOrder(
+        {
+          items: orderItems,
+        },
+        accessToken
+      );
+
+      console.log('[Cart] Order created successfully:', orderResponse);
+
+      // Bước 2: Sau khi có order, tiếp tục với thanh toán VNPay
       const productVariants = selectedItems.map((item) => ({
         variantId: item.variantId!,
         quantity: item.quantity,
       }));
 
-      // Gọi API tạo thanh toán VNPay
-      const response = await createVnpayPayment(
+      console.log('[Cart] Creating VNPay payment with variants:', productVariants);
+
+      const paymentResponse = await createVnpayPayment(
         {
           bankCode: 'NCB',
           locale: 'vn',
           productVariants,
           note: 'Đơn hàng từ website',
+          orderId: orderResponse.order.id,
         },
         accessToken
       );
 
+      console.log('[Cart] VNPay payment response:', paymentResponse);
+
       // Nếu có paymentUrl, redirect đến trang thanh toán VNPay
-      if (response.paymentUrl) {
-        window.location.href = response.paymentUrl;
+      if (paymentResponse.paymentUrl) {
+        window.location.href = paymentResponse.paymentUrl;
       } else {
-        // Nếu không có paymentUrl, có thể redirect đến trang success với orderId
-        const orderId = response.orderId || '';
+        // Nếu không có paymentUrl, redirect đến trang success với orderId
+        const orderId = orderResponse.order.id || paymentResponse.orderId || '';
         router.push(
-          `/payment/success?orderId=${orderId}&amount=${selectedTotalAmount}`
+          `/payment/success?orderId=${orderId}&amount=${orderResponse.totalAmount}`
         );
       }
     } catch (err) {
@@ -225,7 +324,7 @@ export default function CartPage() {
       setError(
         err instanceof Error
           ? err.message
-          : 'Có lỗi xảy ra khi tạo thanh toán. Vui lòng thử lại.'
+          : 'Có lỗi xảy ra khi tạo đơn hàng. Vui lòng thử lại.'
       );
       setIsProcessing(false);
     }
@@ -317,7 +416,7 @@ export default function CartPage() {
                         className="h-5 w-5 rounded border-gray-300 text-rose-600 focus:ring-rose-500"
                       />
                     </div>
-                    <div className="flex-1">
+                    <div className="flex flex-1 flex-col pr-4">
                       <p className="font-medium text-gray-900">
                         {item.productName}
                       </p>
@@ -325,6 +424,20 @@ export default function CartPage() {
                         <p className="text-sm text-gray-500">
                           Kích thước: {item.size}
                         </p>
+                      )}
+                      {item.isColorMixingAvailable && (
+                        <div className="mt-2">
+                          <label className="text-xs font-semibold text-gray-700">
+                            Ghi chú pha màu
+                          </label>
+                          <textarea
+                            value={item.note ?? ''}
+                            onChange={(e) => updateNote(item.id, e.target.value)}
+                            placeholder="Nhập yêu cầu pha màu (tùy chọn)"
+                            className="mt-1 w-full rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm text-gray-900 shadow-sm focus:border-rose-500 focus:ring-2 focus:ring-rose-500 focus:outline-none"
+                            rows={2}
+                          />
+                        </div>
                       )}
                       <p className="mt-1 text-sm font-semibold text-rose-600">
                         {formatPrice(item.price * item.quantity)}
