@@ -87,6 +87,33 @@ npm run lint:fix
 - **ESLint**: `eslint.config.mjs` - Tích hợp với Prettier
 - **EditorConfig**: `.editorconfig` - Cấu hình editor
 
+### Cấu hình Backblaze B2
+
+Project sử dụng Backblaze B2 để lưu trữ và hiển thị hình ảnh. Cần cấu hình các biến môi trường sau:
+
+Tạo file `.env.local` trong thư mục root và thêm:
+
+```env
+# Backblaze B2 Configuration
+# Lấy từ Backblaze B2 Dashboard > App Keys
+# Tạo Application Key với quyền "Read" cho bucket "Phuphiem"
+B2_KEY_ID=your_key_id_here
+B2_APPLICATION_KEY=your_application_key_here
+
+# Bucket Configuration (optional, có giá trị mặc định)
+B2_BUCKET_ID=c02c3c8e5734dae39dad0814
+B2_FILE_PREFIX=test-uploads/
+```
+
+**Cách lấy thông tin:**
+1. Đăng nhập vào [Backblaze B2 Dashboard](https://secure.backblaze.com/)
+2. Vào **App Keys** > **Add a New Application Key**
+3. Chọn bucket "Phuphiem" và quyền "Read"
+4. Copy `keyID` và `applicationKey` (chỉ hiển thị 1 lần!)
+5. Thêm vào file `.env.local`
+
+**Lưu ý:** File `.env.local` đã được ignore trong `.gitignore`, không commit file này lên Git!
+
 ### VS Code Setup
 
 Để tự động format khi save, thêm vào `.vscode/settings.json`:

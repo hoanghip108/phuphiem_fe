@@ -1,6 +1,12 @@
 'use client';
 
-import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  ReactNode,
+} from 'react';
 
 interface B2TokenContextType {
   token: string | null;
@@ -25,15 +31,52 @@ export function B2TokenProvider({ children }: { children: ReactNode }) {
       try {
         setLoading(true);
         const response = await fetch('/api/b2/token');
+        const responseText = await response.text();
+
         if (!response.ok) {
-          throw new Error('Failed to get B2 token');
+          // Đọc error message từ response body nếu có
+          let errorMessage = 'Failed to get B2 token';
+
+          try {
+            const errorData = JSON.parse(responseText) as {
+              error?: string;
+              status?: number;
+            };
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch {
+            // Nếu không parse được JSON, dùng text trực tiếp
+            if (responseText) {
+              errorMessage = responseText;
+            }
+          }
+
+          // Thêm thông báo cụ thể cho lỗi 401
+          if (response.status === 401) {
+            errorMessage =
+              'B2 authorization token is invalid or expired. Please check B2_AUTHORIZATION_TOKEN configuration.';
+          }
+
+          console.error(
+            'B2 token API error:',
+            errorMessage,
+            'Status:',
+            response.status
+          );
+          throw new Error(errorMessage);
         }
-        const data = (await response.json()) as { token: string };
+
+        const data = JSON.parse(responseText) as { token: string };
         setToken(data.token);
         setError(null);
       } catch (err) {
         console.error('Error fetching B2 token:', err);
-        setError('Failed to load image authorization');
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : 'Failed to load image authorization';
+        setError(errorMessage);
       } finally {
         setLoading(false);
       }
@@ -52,4 +95,3 @@ export function B2TokenProvider({ children }: { children: ReactNode }) {
 export function useB2Token() {
   return useContext(B2TokenContext);
 }
-
