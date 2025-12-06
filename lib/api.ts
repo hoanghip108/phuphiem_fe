@@ -588,8 +588,12 @@ export async function createOrder(
     throw new Error(message);
   }
 
+  if (!data) {
+    throw new Error('Không thể tạo đơn hàng. Phản hồi từ máy chủ không hợp lệ.');
+  }
+
   console.log('[API] Order created successfully:', data);
-  return data as OrderResponse;
+  return data as unknown as OrderResponse;
 }
 
 /**
