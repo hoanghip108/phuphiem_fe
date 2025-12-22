@@ -4,7 +4,6 @@ import { useMemo, useState } from 'react';
 import Link from 'next/link';
 import type { BackendProduct, BackendProductVariant } from '@/lib/api';
 import B2Image from '@/components/B2Image';
-import CustomSelect from '@/components/CustomSelect';
 import { useCart } from '@/components/CartContext';
 
 interface ProductDetailClientProps {
@@ -134,18 +133,25 @@ export default function ProductDetailClient({
             {/* Variant selector */}
             {product.variants.length > 0 && (
               <div className="mb-4">
-                <CustomSelect
-                  label="Chọn kích thước"
-                  options={product.variants.map((variant) => ({
-                    value: variant.id,
-                    label: `${variant.size} – ${formatPrice(
-                      Number(variant.price)
-                    )}`,
-                  }))}
-                  value={selectedVariantId}
-                  onChange={(value) => setSelectedVariantId(Number(value))}
-                  className="w-full max-w-xs"
-                />
+                <label className="mb-2 block text-sm font-medium text-gray-700">
+                  Chọn kích thước
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {product.variants.map((variant) => (
+                    <button
+                      key={variant.id}
+                      type="button"
+                      onClick={() => setSelectedVariantId(variant.id)}
+                      className={`rounded-lg border-2 px-4 py-2 text-sm font-medium transition-all ${
+                        selectedVariantId === variant.id
+                          ? 'border-rose-600 bg-rose-50 text-rose-600'
+                          : 'border-gray-300 bg-white text-gray-700 hover:border-rose-400 hover:bg-rose-50'
+                      }`}
+                    >
+                      {variant.size} – {formatPrice(Number(variant.price))}
+                    </button>
+                  ))}
+                </div>
               </div>
             )}
 

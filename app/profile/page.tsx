@@ -5,8 +5,11 @@ import Link from 'next/link';
 import {
   getCurrentUser,
   updateActiveUserDetail,
+  updateUserDetail,
   UserDetail,
+  type UpdateUserDetailDto,
 } from '@/lib/api';
+import UpdateAddressModal from '@/components/UpdateAddressModal';
 
 interface UserProfileResponse {
   id: number;
@@ -26,6 +29,8 @@ export default function ProfilePage() {
   const [saving, setSaving] = useState(false);
   const [selectedDetailId, setSelectedDetailId] = useState<number | null>(null);
   const [activeDetailId, setActiveDetailId] = useState<number | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingDetail, setEditingDetail] = useState<UserDetail | null>(null);
   const tokenRef = useRef<string | null>(null);
 
   const fetchProfile = useCallback(
@@ -96,6 +101,32 @@ export default function ProfilePage() {
     }
   };
 
+  const handleEditAddress = (detail: UserDetail, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingDetail(detail);
+    setIsModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsModalOpen(false);
+    setEditingDetail(null);
+  };
+
+  const handleSaveAddress = async (data: UpdateUserDetailDto) => {
+    if (!tokenRef.current) {
+      throw new Error('Bạn chưa đăng nhập.');
+    }
+
+    // Nếu có editingDetail thì là cập nhật, nếu không thì là tạo mới
+    // Cả hai đều dùng cùng endpoint POST /users/address
+    await updateUserDetail(
+      editingDetail?.id ?? 0,
+      data,
+      tokenRef.current
+    );
+    await fetchProfile({ silent: true });
+  };
+
   if (loading) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center bg-gray-50 px-4">
@@ -161,6 +192,29 @@ export default function ProfilePage() {
                 Danh sách thông tin chi tiết (userDetails)
               </p>
             </div>
+            <button
+              type="button"
+              onClick={() => {
+                setEditingDetail(null);
+                setIsModalOpen(true);
+              }}
+              className="inline-flex items-center rounded-lg bg-rose-600 px-4 py-2 text-sm font-semibold text-white shadow-sm hover:bg-rose-700 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+            >
+              <svg
+                className="mr-2 h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 4v16m8-8H4"
+                />
+              </svg>
+              Thêm mới địa chỉ
+            </button>
           </div>
 
           {user.userDetails && user.userDetails.length > 0 ? (
@@ -193,35 +247,39 @@ export default function ProfilePage() {
                             <span className="h-2 w-2 rounded-full bg-white" />
                           )}
                         </span>
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-gray-900">
-                            Địa chỉ #{detail.id}
-                          </p>
-                          {(detail.isActive ||
-                            selectedDetailId === detail.id) && (
-                            <span
-                              className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${
-                                selectedDetailId === detail.id
-                                  ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/30'
-                                  : 'bg-gray-200 text-gray-700 ring-gray-300'
-                              }`}
-                            >
-                              {detail.isActive && detail.id === selectedDetailId
-                                ? 'Mặc định'
-                                : detail.isActive
-                                ? 'Hiện tại'
-                                : selectedDetailId === detail.id
-                                ? 'Sẽ đặt'
-                                : 'Dự phòng'}
-                            </span>
-                          )}
-                        </div>
+                        {(detail.isActive ||
+                          selectedDetailId === detail.id) && (
+                          <span
+                            className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${
+                              selectedDetailId === detail.id
+                                ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/30'
+                                : 'bg-gray-200 text-gray-700 ring-gray-300'
+                            }`}
+                          >
+                            {detail.isActive && detail.id === selectedDetailId
+                              ? 'Mặc định'
+                              : detail.isActive
+                              ? 'Hiện tại'
+                              : selectedDetailId === detail.id
+                              ? 'Sẽ đặt'
+                              : 'Dự phòng'}
+                          </span>
+                        )}
                       </div>
-                      <p className="text-xs text-gray-500">
-                        {formatDate(detail.updatedAt) ||
-                          formatDate(detail.createdAt) ||
-                          ''}
-                      </p>
+                      <div className="flex items-center gap-3">
+                        <button
+                          type="button"
+                          onClick={(e) => handleEditAddress(detail, e)}
+                          className="rounded-lg border border-gray-300 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:ring-offset-2"
+                        >
+                          Sửa
+                        </button>
+                        <p className="text-xs text-gray-500">
+                          {formatDate(detail.updatedAt) ||
+                            formatDate(detail.createdAt) ||
+                            ''}
+                        </p>
+                      </div>
                     </div>
                   <dl className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <InfoRow
@@ -272,6 +330,13 @@ export default function ProfilePage() {
           )}
         </div>
       </div>
+
+      <UpdateAddressModal
+        isOpen={isModalOpen}
+        onClose={handleCloseModal}
+        onSave={handleSaveAddress}
+        userDetail={editingDetail}
+      />
     </div>
   );
 }

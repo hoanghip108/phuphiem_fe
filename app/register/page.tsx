@@ -4,6 +4,8 @@ import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { registerApi } from '@/lib/api';
+import { validatePassword } from '@/lib/validation';
+import PasswordStrengthIndicator from '@/components/PasswordStrengthIndicator';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -23,6 +25,7 @@ export default function RegisterPage() {
     password?: string;
     confirmPassword?: string;
   }>({});
+  const [showPasswordRequirements, setShowPasswordRequirements] = useState(false);
 
   const validateForm = () => {
     const errors: {
@@ -51,8 +54,11 @@ export default function RegisterPage() {
 
     if (!formData.password) {
       errors.password = 'Vui lòng nhập mật khẩu';
-    } else if (formData.password.length < 6) {
-      errors.password = 'Mật khẩu phải có ít nhất 6 ký tự';
+    } else {
+      const passwordValidation = validatePassword(formData.password);
+      if (!passwordValidation.isValid) {
+        errors.password = passwordValidation.errors[0];
+      }
     }
 
     if (!formData.confirmPassword) {
@@ -233,6 +239,7 @@ export default function RegisterPage() {
                 type="password"
                 autoComplete="new-password"
                 value={formData.password}
+                onFocus={() => setShowPasswordRequirements(true)}
                 onChange={(e) => {
                   setFormData({ ...formData, password: e.target.value });
                   if (fieldErrors.password) {
@@ -251,13 +258,17 @@ export default function RegisterPage() {
                     ? 'ring-red-300 focus:ring-red-600'
                     : 'ring-gray-300 focus:ring-rose-600'
                 }`}
-                placeholder="Mật khẩu (tối thiểu 6 ký tự)"
+                placeholder="Mật khẩu"
               />
               {fieldErrors.password && (
                 <p className="mt-1 text-sm text-red-600">
                   {fieldErrors.password}
                 </p>
               )}
+              <PasswordStrengthIndicator
+                password={formData.password}
+                show={showPasswordRequirements && formData.password.length > 0}
+              />
             </div>
             <div>
               <label htmlFor="confirmPassword" className="sr-only">

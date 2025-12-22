@@ -65,22 +65,46 @@ export default function Header() {
   useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    const token = localStorage.getItem('accessToken');
-    if (token) {
-      setIsLoggedIn(true);
-      const storedUser = localStorage.getItem('user');
-      if (storedUser) {
-        try {
-          const parsed = JSON.parse(storedUser) as HeaderUser;
-          setUser(parsed);
-        } catch {
-          // ignore parse error
+    const checkAuth = () => {
+      const token = localStorage.getItem('accessToken');
+      if (token) {
+        setIsLoggedIn(true);
+        const storedUser = localStorage.getItem('user');
+        if (storedUser) {
+          try {
+            const parsed = JSON.parse(storedUser) as HeaderUser;
+            setUser(parsed);
+          } catch {
+            // ignore parse error
+          }
         }
+      } else {
+        setIsLoggedIn(false);
+        setUser(null);
       }
-    } else {
-      setIsLoggedIn(false);
-      setUser(null);
-    }
+    };
+
+    checkAuth();
+
+    // Listen for storage changes (khi OAuth callback set localStorage)
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'accessToken' || e.key === 'user') {
+        checkAuth();
+      }
+    };
+
+    // Listen for custom event khi localStorage được set từ cùng một tab
+    const handleAuthUpdate = () => {
+      checkAuth();
+    };
+
+    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('auth-update', handleAuthUpdate);
+
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('auth-update', handleAuthUpdate);
+    };
   }, [pathname]);
 
   return (

@@ -30,6 +30,43 @@ export interface UserDetail {
   ward?: string;
   address?: string;
   isActive?: boolean;
+  provinceId?: number;
+  districtId?: number;
+  wardId?: number;
+}
+
+// Address API Types
+export interface Province {
+  id: number;
+  name: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  phone_code: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface District {
+  id: number;
+  name: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  short_codename: string;
+  provinceId: number;
+  province?: Province;
+}
+
+export interface Ward {
+  id: number;
+  name: string;
+  code: number;
+  codename: string;
+  division_type: string;
+  short_codename: string;
+  districtId: number;
+  district?: District;
 }
 
 // Kiểu product theo backend
@@ -218,6 +255,48 @@ export async function updateActiveUserDetail(
       text || 'Không thể cập nhật địa chỉ mặc định. Vui lòng thử lại.';
     throw new Error(message);
   }
+}
+
+export interface UpdateUserDetailDto {
+  province?: string;
+  district?: string;
+  ward?: string;
+  address: string;
+  provinceId?: number;
+  districtId?: number;
+  wardId?: number;
+}
+
+/**
+ * Cập nhật thông tin địa chỉ người dùng
+ */
+export async function updateUserDetail(
+  detailId: number,
+  payload: UpdateUserDetailDto,
+  accessToken: string
+): Promise<UserDetail> {
+  const response = await fetch(`${AUTH_BASE_URL}/users/address`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${accessToken}`,
+    },
+    body: JSON.stringify(payload),
+  });
+
+  if (!response.ok) {
+    let message = 'Không thể cập nhật địa chỉ. Vui lòng thử lại.';
+    try {
+      const data = (await response.json()) as { message?: string };
+      message = data.message || message;
+    } catch {
+      const text = await response.text();
+      if (text) message = text;
+    }
+    throw new Error(message);
+  }
+
+  return response.json();
 }
 
 export interface ProductListResponse {
@@ -631,6 +710,15 @@ export interface OrderDetail {
     updatedAt: string;
     size: string;
     price: string;
+    product?: {
+      id: number;
+      createdAt: string;
+      updatedAt: string;
+      productName: string;
+      description: string;
+      images: string[];
+      isColorMixingAvailable: boolean;
+    };
   };
   quantity: number;
   unitPrice: string;
@@ -639,10 +727,12 @@ export interface OrderDetail {
 
 export interface MyOrder {
   id: number;
+  orderCode?: string;
   createdAt: string;
   updatedAt: string;
   status: string;
   orderDetails: OrderDetail[];
+  shippingAddress?: string | null;
 }
 
 /**
@@ -651,19 +741,146 @@ export interface MyOrder {
 export async function getMyOrders(
   accessToken: string
 ): Promise<MyOrder[]> {
-  const response = await fetch(`${AUTH_BASE_URL}/orders/my-orders`, {
-    headers: {
-      Authorization: `Bearer ${accessToken}`,
-    },
+  try {
+    const url = `${AUTH_BASE_URL}/orders/my-orders`;
+    console.log('[API] Fetching orders from:', url);
+    
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      cache: 'no-store',
+    });
+
+    console.log('[API] Orders response status:', response.status);
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[API] Orders error response:', errorText);
+      const message =
+        response.status === 401
+          ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
+          : response.status === 404
+          ? 'Không tìm thấy đơn hàng.'
+          : `Không thể tải danh sách đơn hàng. (${response.status})`;
+      throw new Error(message);
+    }
+
+    const data = await response.json();
+    console.log('[API] Orders data received:', data);
+    return data;
+  } catch (error) {
+    console.error('[API] Error in getMyOrders:', error);
+    throw error;
+  }
+}
+
+/**
+ * Address API Functions
+ */
+
+/**
+ * Lấy tất cả tỉnh/thành phố
+ */
+export async function getProvinces(): Promise<Province[]> {
+  const response = await fetch(`${AUTH_BASE_URL}/address/provinces`, {
     cache: 'no-store',
   });
 
   if (!response.ok) {
-    const message =
-      response.status === 401
-        ? 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.'
-        : 'Không thể tải danh sách đơn hàng.';
-    throw new Error(message);
+    throw new Error('Không thể tải danh sách tỉnh/thành phố.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Lấy tất cả quận/huyện của một tỉnh
+ */
+export async function getDistrictsByProvince(
+  provinceCode: number
+): Promise<District[]> {
+  const response = await fetch(
+    `${AUTH_BASE_URL}/address/districts/province/${provinceCode}`,
+    {
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách quận/huyện.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Lấy tất cả phường/xã của một quận/huyện
+ */
+export async function getWardsByDistrict(
+  districtCode: number
+): Promise<Ward[]> {
+  const response = await fetch(
+    `${AUTH_BASE_URL}/address/wards/district/${districtCode}`,
+    {
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải danh sách phường/xã.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Lấy thông tin tỉnh theo code
+ */
+export async function getProvinceByCode(code: number): Promise<Province> {
+  const response = await fetch(
+    `${AUTH_BASE_URL}/address/provinces/code/${code}`,
+    {
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải thông tin tỉnh/thành phố.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Lấy thông tin quận theo code
+ */
+export async function getDistrictByCode(code: number): Promise<District> {
+  const response = await fetch(
+    `${AUTH_BASE_URL}/address/districts/code/${code}`,
+    {
+      cache: 'no-store',
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error('Không thể tải thông tin quận/huyện.');
+  }
+
+  return response.json();
+}
+
+/**
+ * Lấy thông tin phường theo code
+ */
+export async function getWardByCode(code: number): Promise<Ward> {
+  const response = await fetch(`${AUTH_BASE_URL}/address/wards/code/${code}`, {
+    cache: 'no-store',
+  });
+
+  if (!response.ok) {
+    throw new Error('Không thể tải thông tin phường/xã.');
   }
 
   return response.json();
