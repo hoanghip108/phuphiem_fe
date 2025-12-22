@@ -247,24 +247,24 @@ export default function ProfilePage() {
                             <span className="h-2 w-2 rounded-full bg-white" />
                           )}
                         </span>
-                        {(detail.isActive ||
-                          selectedDetailId === detail.id) && (
-                          <span
-                            className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${
-                              selectedDetailId === detail.id
-                                ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/30'
-                                : 'bg-gray-200 text-gray-700 ring-gray-300'
-                            }`}
-                          >
-                            {detail.isActive && detail.id === selectedDetailId
-                              ? 'Mặc định'
-                              : detail.isActive
-                              ? 'Hiện tại'
-                              : selectedDetailId === detail.id
-                              ? 'Sẽ đặt'
-                              : 'Dự phòng'}
-                          </span>
-                        )}
+                          {(detail.isActive ||
+                            selectedDetailId === detail.id) && (
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ring-1 ${
+                                selectedDetailId === detail.id
+                                  ? 'bg-emerald-500/10 text-emerald-700 ring-emerald-500/30'
+                                  : 'bg-gray-200 text-gray-700 ring-gray-300'
+                              }`}
+                            >
+                              {detail.isActive && detail.id === selectedDetailId
+                                ? 'Mặc định'
+                                : detail.isActive
+                                ? 'Hiện tại'
+                                : selectedDetailId === detail.id
+                                ? 'Sẽ đặt'
+                                : 'Dự phòng'}
+                            </span>
+                          )}
                       </div>
                       <div className="flex items-center gap-3">
                         <button
